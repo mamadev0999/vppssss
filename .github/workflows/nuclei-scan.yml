@@ -1,0 +1,37 @@
+name: Automated Nuclei Scan
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:        # manual trigger button
+  schedule:
+    - cron: '0 0 * * *'      # every day at midnight UTC
+
+jobs:
+  nuclei-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Install Nuclei
+        run: |
+          curl -s https://api.github.com/repos/projectdiscovery/nuclei/releases/latest \
+          | grep "browser_download_url.*linux_amd64.zip" \
+          | cut -d '"' -f 4 \
+          | wget -i -
+          unzip nuclei_*_linux_amd64.zip
+          chmod +x nuclei
+          sudo mv nuclei /usr/local/bin/
+
+      - name: Run Nuclei Scan
+        run: |
+          mkdir -p nuclei-results
+          nuclei -u https://example.com -o nuclei-results/result.txt
+
+      - name: Upload Scan Result
+        uses: actions/upload-artifact@v3
+        with:
+          name: nuclei-result
+          path: nuclei-results/result.txt
